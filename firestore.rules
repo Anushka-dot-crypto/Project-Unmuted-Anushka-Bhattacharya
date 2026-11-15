@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Catch-All Deny Rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Connection test document
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Validation for User entity
+    function isValidUser(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    // Validation for Case entity
+    function isValidCase(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.incidentType is string && data.incidentType.size() <= 50 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.createdAt is string && data.createdAt.size() <= 50 &&
+             data.lastUpdated is string && data.lastUpdated.size() <= 50;
+    }
+
+    // Validation for Evidence entity
+    function isValidEvidence(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 64 &&
+             data.caseId is string && data.caseId.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.type is string && data.type.size() <= 40 &&
+             data.title is string && data.title.size() <= 150 &&
+             data.dateAdded is string && data.dateAdded.size() <= 50;
+    }
+
+    // Validation for Report entity
+    function isValidReport(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 64 &&
+             data.caseId is string && data.caseId.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.version is number &&
+             data.createdAt is string && data.createdAt.size() <= 50 &&
+             data.status is string && data.status.size() <= 30;
+    }
+
+    // Match /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().id == userId;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().id == existing().id && incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // Match /cases/{caseId}
+    match /cases/{caseId} {
+      allow get: if isSignedIn() && isValidId(caseId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(caseId) && isValidCase(incoming()) && incoming().id == caseId && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(caseId) && isValidCase(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt && incoming().id == existing().id;
+      allow delete: if isSignedIn() && isValidId(caseId) && existing().userId == request.auth.uid;
+
+      // Master Gate: subcollection /cases/{caseId}/evidence/{evidenceId}
+      match /evidence/{evidenceId} {
+        allow get: if isSignedIn() && isValidId(evidenceId) && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(evidenceId) && isValidEvidence(incoming()) && incoming().id == evidenceId && incoming().caseId == caseId && incoming().userId == request.auth.uid && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow update: if isSignedIn() && isValidId(evidenceId) && isValidEvidence(incoming()) && incoming().id == existing().id && incoming().caseId == existing().caseId && incoming().userId == existing().userId && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && isValidId(evidenceId) && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+      }
+
+      // Master Gate: subcollection /cases/{caseId}/reports/{reportId}
+      match /reports/{reportId} {
+        allow get: if isSignedIn() && isValidId(reportId) && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(reportId) && isValidReport(incoming()) && incoming().id == reportId && incoming().caseId == caseId && incoming().userId == request.auth.uid && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow update: if isSignedIn() && isValidId(reportId) && isValidReport(incoming()) && incoming().id == existing().id && incoming().caseId == existing().caseId && incoming().userId == existing().userId && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && isValidId(reportId) && get(/databases/$(database)/documents/cases/$(caseId)).data.userId == request.auth.uid;
+      }
+    }
+  }
+}

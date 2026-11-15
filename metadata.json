@@ -1,0 +1,10 @@
+{
+  "name": "Remix Remix Remix Project UNMUTED - 3",
+  "description": "Privacy-first digital safety and incident-response platform for online harassment, blackmail, deepfakes, and cybercrimes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

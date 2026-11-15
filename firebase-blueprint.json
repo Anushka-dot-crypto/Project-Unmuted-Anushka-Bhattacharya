@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and security preferences",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID", "maxLength": 128 },
+        "name": { "type": "string", "description": "Display name of the user", "maxLength": 100 },
+        "email": { "type": "string", "description": "User email address", "maxLength": 150 },
+        "isGuest": { "type": "boolean", "description": "Whether user is a guest" },
+        "language": { "type": "string", "description": "Preferred interface language", "maxLength": 10 },
+        "region": { "type": "string", "description": "Assigned region code", "maxLength": 30 },
+        "theme": { "type": "string", "description": "Theme mode", "maxLength": 10 },
+        "passcodeMode": { "type": "string", "description": "Security passcode mode", "maxLength": 30 },
+        "sixDigitPasscode": { "type": "string", "description": "Encrypted or masked 6-digit passcode", "maxLength": 6 },
+        "decoySixDigitPasscode": { "type": "string", "description": "Decoy duress 6-digit passcode", "maxLength": 6 },
+        "createdAt": { "type": "string", "description": "ISO timestamp of creation", "maxLength": 50 },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last update", "maxLength": 50 }
+      },
+      "required": ["id", "name", "email", "createdAt"]
+    },
+    "Case": {
+      "title": "Case",
+      "description": "Incident documentation case file",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique case ID", "maxLength": 64 },
+        "userId": { "type": "string", "description": "Owner user UID", "maxLength": 128 },
+        "incidentType": { "type": "string", "description": "Category of cyber incident", "maxLength": 50 },
+        "title": { "type": "string", "description": "Descriptive title of the incident", "maxLength": 200 },
+        "currentStep": { "type": "number", "description": "Current workflow step index" },
+        "isCompleted": { "type": "boolean", "description": "Whether the case has been completed" },
+        "status": { "type": "string", "description": "Case lifecycle state", "maxLength": 30 },
+        "createdAt": { "type": "string", "description": "ISO timestamp of case creation", "maxLength": 50 },
+        "lastUpdated": { "type": "string", "description": "ISO timestamp of latest update", "maxLength": 50 },
+        "details": { "type": "object", "description": "Incident specific context and platform data" }
+      },
+      "required": ["id", "userId", "incidentType", "title", "createdAt", "lastUpdated"]
+    },
+    "Evidence": {
+      "title": "Evidence",
+      "description": "Forensic evidence metadata item associated with a case",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique evidence ID", "maxLength": 64 },
+        "caseId": { "type": "string", "description": "Parent case ID", "maxLength": 64 },
+        "userId": { "type": "string", "description": "Owner user UID", "maxLength": 128 },
+        "type": { "type": "string", "description": "Evidence media or text classification", "maxLength": 40 },
+        "title": { "type": "string", "description": "Descriptive title", "maxLength": 150 },
+        "description": { "type": "string", "description": "Detailed notes or extracted text", "maxLength": 2000 },
+        "dateAdded": { "type": "string", "description": "ISO timestamp added", "maxLength": 50 },
+        "fileUrl": { "type": "string", "description": "Data URL or reference link", "maxLength": 100000 },
+        "hash": { "type": "string", "description": "Cryptographic integrity hash", "maxLength": 128 }
+      },
+      "required": ["id", "caseId", "userId", "type", "title", "dateAdded"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Formal legal/police dossier generated from a case",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique report ID", "maxLength": 64 },
+        "caseId": { "type": "string", "description": "Associated parent case ID", "maxLength": 64 },
+        "userId": { "type": "string", "description": "Owner user UID", "maxLength": 128 },
+        "version": { "type": "number", "description": "Sequential dossier version number" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of report generation", "maxLength": 50 },
+        "status": { "type": "string", "description": "Dossier review status", "maxLength": 30 },
+        "sections": { "type": "object", "description": "Structured sections of the formal police complaint" }
+      },
+      "required": ["id", "caseId", "userId", "version", "createdAt", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private profile document for each authenticated user"
+    },
+    "/cases/{caseId}": {
+      "schema": "Case",
+      "description": "Security incident cases created and managed by the owner user"
+    },
+    "/cases/{caseId}/evidence/{evidenceId}": {
+      "schema": "Evidence",
+      "description": "Evidence records attached to a specific case, protected by case ownership"
+    },
+    "/cases/{caseId}/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Formal investigation dossiers generated for a case"
+    }
+  }
+}
